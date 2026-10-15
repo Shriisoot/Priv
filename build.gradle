@@ -33,14 +33,14 @@ loom {
     }
 
     runs {
-        // Headless end-to-end test: xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew runAutotest
+        // Headless end-to-end test: xvfb-run -a -s "-screen 0 960x540x24" ./gradlew runAutotest
         autotest {
             client()
             name = "Autotest Client"
             source sourceSets.autotest
             runDir = "run-autotest"
             vmArg "-Dspiderman.autotest=true"
-            programArgs "--width", "1280", "--height", "720"
+            programArgs "--width", "960", "--height", "540"
         }
     }
 }

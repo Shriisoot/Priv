@@ -66,6 +66,7 @@ public class AutoTestClient implements ClientModInitializer {
     private final Map<String, Object> metrics = new LinkedHashMap<>();
     private Minecraft mc;
     private boolean worldRequested;
+    private int titleTicks;
     private boolean started;
     private int ticks;
     private int cameraId = -1;
@@ -107,8 +108,10 @@ public class AutoTestClient implements ClientModInitializer {
                 mc.setScreen(new TitleScreen());
                 return;
             }
-            if (mc.screen instanceof TitleScreen) {
+            // The title screen exists behind the resource-loading overlay; wait for loading to finish.
+            if (mc.screen instanceof TitleScreen && mc.getOverlay() == null && ++titleTicks > 40) {
                 worldRequested = true;
+                log("resources loaded, creating world");
                 createWorld();
             }
             return;
