@@ -32,7 +32,12 @@ public class WebShooterItem extends Item {
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
-        if (!level.isClientSide) {
+        if (level.isClientSide) {
+            WebLineEntity mine = WebLineEntity.findFor(player);
+            if (mine != null) {
+                mine.releasedLocally = true;
+            }
+        } else {
             WebLineEntity existing = WebLineEntity.findFor(player);
             if (existing != null) {
                 existing.release();

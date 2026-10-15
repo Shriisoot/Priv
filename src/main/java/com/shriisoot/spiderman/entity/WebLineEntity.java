@@ -1,6 +1,7 @@
 package com.shriisoot.spiderman.entity;
 
 import com.shriisoot.spiderman.item.WebShooterItem;
+import com.shriisoot.spiderman.mixin.ServerGamePacketListenerImplAccessor;
 import com.shriisoot.spiderman.registry.ModEntities;
 import com.shriisoot.spiderman.registry.ModSounds;
 import com.shriisoot.spiderman.util.FallProtection;
@@ -55,6 +56,9 @@ public class WebLineEntity extends Projectile {
     private int anchoredTicks;
     private int hookedTicks;
     private int lifetime = -1;
+    private boolean hookPull = true;
+    /** Client-only: the local player already let go; ignore this web until the server removes it. */
+    public boolean releasedLocally;
 
     public WebLineEntity(EntityType<? extends WebLineEntity> type, Level level) {
         super(type, level);
@@ -158,6 +162,7 @@ public class WebLineEntity extends Projectile {
             anchoredTicks++;
             if (!level().isClientSide && owner instanceof ServerPlayer player) {
                 FallProtection.grant(player, 100);
+                ((ServerGamePacketListenerImplAccessor) player.connection).spiderman$setAboveGroundTickCount(0);
                 if (getMode() == MODE_ZIP && anchoredTicks > 3 && player.getEyePosition().distanceTo(position()) < 1.8) {
                     release();
                     return;
@@ -193,11 +198,11 @@ public class WebLineEntity extends Projectile {
             return;
         }
         hookedTicks++;
-        if (!hooked.isAlive() || hookedTicks > 8) {
+        if (!hooked.isAlive() || (hookPull && hookedTicks > 8)) {
             discard();
             return;
         }
-        if (hookedTicks == 2 && owner != null) {
+        if (hookPull && hookedTicks == 2 && owner != null) {
             Vec3 pull = owner.position().subtract(hooked.position());
             double dist = pull.length();
             if (dist > 0.5) {
@@ -212,6 +217,13 @@ public class WebLineEntity extends Projectile {
     protected boolean canHitEntity(Entity target) {
         Entity owner = getOwnerEntity();
         if (target == owner || target instanceof WebLineEntity || !target.isAlive() || !target.isPickable() || target.isSpectator()) {
+            return false;
+        }
+        if (owner != null && owner.getRootVehicle() == target.getRootVehicle()) {
+            return false;
+        }
+        if (target instanceof Player victim && owner instanceof Player shooter
+                && (!shooter.canHarmPlayer(victim) || victim.getAbilities().invulnerable)) {
             return false;
         }
         if (owner instanceof SpiderManEntity spidey) {
@@ -253,6 +265,14 @@ public class WebLineEntity extends Projectile {
                 living.hurt(damageSources().mobProjectile(this, attacker), getMode() == MODE_STRIKE ? 3.0F : 1.0F);
             }
         }
+    }
+
+    /** Re-attaches the strand to an entity (e.g. the log it just yanked free) so it visibly reels it in. */
+    public void hookOnto(Entity target, int ticks) {
+        this.entityData.set(DATA_HOOKED_ID, target.getId());
+        this.hookedTicks = 0;
+        this.hookPull = false;
+        this.lifetime = tickCount + ticks;
     }
 
     /** Lets go of the web. Players keep their momentum and get a moment of fall-damage grace. */

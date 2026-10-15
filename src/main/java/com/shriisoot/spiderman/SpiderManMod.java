@@ -9,6 +9,8 @@ import com.shriisoot.spiderman.util.FallProtection;
 import com.shriisoot.spiderman.entity.WebLineEntity;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.resources.ResourceLocation;
@@ -36,15 +38,19 @@ public class SpiderManMod implements ModInitializer {
         ServerPlayNetworking.registerGlobalReceiver(ReleaseWebPayload.TYPE, (payload, context) -> {
             ServerPlayer player = context.player();
             WebLineEntity web = WebLineEntity.findFor(player);
-            if (web != null) {
+            if (web != null && web.getId() == payload.webId()) {
                 web.release();
             }
         });
 
+        // fallDistance > 0 separates a real landing from ender-pearl damage, which resets it before hurting.
         ServerLivingEntityEvents.ALLOW_DAMAGE.register((entity, source, amount) ->
                 !(entity instanceof ServerPlayer player
                         && source.is(DamageTypeTags.IS_FALL)
+                        && player.fallDistance > 0
                         && FallProtection.isProtected(player)));
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> FallProtection.forget(handler.getPlayer()));
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> FallProtection.clear());
 
         LOGGER.info("Your friendly neighborhood Spider-Man is ready.");
     }

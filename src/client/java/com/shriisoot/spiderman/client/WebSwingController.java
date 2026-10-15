@@ -19,6 +19,9 @@ public final class WebSwingController {
     private static int releasedWebId = -1;
     private static double ropeLength;
     private static boolean jumpWasDown;
+    private static boolean wasOnGround = true;
+    private static final double AIR_DRAG_XZ = 0.91;
+    private static final double AIR_DRAG_Y = 0.98;
 
     private WebSwingController() {
     }
@@ -29,9 +32,15 @@ public final class WebSwingController {
             webId = -1;
             return;
         }
+        // Nothing moves while paused; applying rope forces anyway would store them up and fling the player on resume.
+        if (client.isPaused() || (client.level != null && !client.level.tickRateManager().runsNormally())) {
+            return;
+        }
+        boolean groundedBefore = wasOnGround;
+        wasOnGround = player.onGround();
         boolean jumpDown = player.input.jumping;
         WebLineEntity web = ClientWebCache.get(player);
-        if (web == null || !web.isAnchored() || web.getHookedEntity() != null || web.getId() == releasedWebId) {
+        if (web == null || !web.isAnchored() || web.getHookedEntity() != null || web.getId() == releasedWebId || web.releasedLocally) {
             webId = -1;
             jumpWasDown = jumpDown;
             return;
@@ -53,8 +62,8 @@ public final class WebSwingController {
         Vec3 dir = toAnchor.scale(1.0 / dist);
         Vec3 velocity = player.getDeltaMovement();
 
-        // Jump in mid-air: let go and get flung forward.
-        if (jumpDown && !jumpWasDown && !player.onGround()) {
+        // Jump in mid-air: let go and get flung forward. (A jump started from the ground is just a jump.)
+        if (jumpDown && !jumpWasDown && !groundedBefore && !player.onGround()) {
             player.setDeltaMovement(velocity.add(player.getLookAngle().scale(0.35)).add(0, 0.55, 0));
             letGo(web);
             jumpWasDown = true;
@@ -78,6 +87,8 @@ public final class WebSwingController {
         }
 
         if (!player.onGround()) {
+            // Undo the air drag travel() is about to apply, so a swing keeps its momentum like a real pendulum.
+            velocity = new Vec3(velocity.x / AIR_DRAG_XZ, velocity.y / AIR_DRAG_Y, velocity.z / AIR_DRAG_XZ).scale(0.995);
             float yaw = player.getYRot() * Mth.DEG_TO_RAD;
             Vec3 forward = new Vec3(-Mth.sin(yaw), 0, Mth.cos(yaw));
             Vec3 right = new Vec3(-Mth.cos(yaw), 0, -Mth.sin(yaw));
@@ -104,6 +115,7 @@ public final class WebSwingController {
     private static void letGo(WebLineEntity web) {
         webId = -1;
         releasedWebId = web.getId();
-        ClientPlayNetworking.send(ReleaseWebPayload.INSTANCE);
+        web.releasedLocally = true;
+        ClientPlayNetworking.send(new ReleaseWebPayload(web.getId()));
     }
 }

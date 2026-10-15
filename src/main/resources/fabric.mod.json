@@ -13,6 +13,7 @@
     "client": ["com.shriisoot.spiderman.client.SpiderManClient"]
   },
   "mixins": [
+    "spiderman.mixins.json",
     {
       "config": "spiderman.client.mixins.json",
       "environment": "client"

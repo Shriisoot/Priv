@@ -114,7 +114,8 @@ public class GatherGoal extends Goal {
             setPhase(Phase.SEARCH);
         }
         // Once the quota is met, sweep up any drops still lying around, then head home.
-        if (spidey.orderComplete() && phase != Phase.WEB_TUG && phase != Phase.COLLECT && findDrop() == null) {
+        if (spidey.orderComplete() && phase != Phase.WEB_TUG && phase != Phase.COLLECT
+                && !spidey.hasPendingDrops() && findDrop() == null) {
             spidey.finishOrder("");
             return;
         }
@@ -248,8 +249,13 @@ public class GatherGoal extends Goal {
         level().destroyBlockProgress(spidey.getId(), target, Math.min(9, phaseTicks * 10 / WEB_TUG_TICKS));
         if (phaseTicks >= WEB_TUG_TICKS) {
             clearCrack();
-            spidey.harvest(target, resource, true);
-            discardWeb();
+            List<ItemEntity> drops = spidey.harvest(target, resource, true);
+            if (web != null && web.isAlive() && !drops.isEmpty()) {
+                web.hookOnto(drops.get(0), 30);
+                web = null;
+            } else {
+                discardWeb();
+            }
             target = null;
             searchCooldown = 0;
             setPhase(Phase.SEARCH);

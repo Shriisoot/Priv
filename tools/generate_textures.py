@@ -20,7 +20,8 @@ RED = (190, 22, 34)
 RED_DARK = (118, 8, 20)
 BLUE = (30, 58, 150)
 BLUE_DARK = (14, 28, 88)
-LINE = (16, 6, 10)
+LINE = (16, 6, 10)       # seams, emblem, eye rims
+WEB = (62, 4, 14)        # web lines: dark maroon reads as "red suit" at a distance (entity textures have no mipmaps)
 EYE = (236, 242, 248)
 EYE_SHADE = (180, 196, 214)
 EYE_RIM = (10, 10, 14)
@@ -98,7 +99,7 @@ def tube_web(w, h, columns=2, row_step=None, sag=3.0, offset=0.0):
     return mask
 
 
-def apply_lines(img, line_mask, region_mask, color=LINE):
+def apply_lines(img, line_mask, region_mask, color=WEB):
     lines = Image.new("RGBA", img.size, (*color, 255))
     m = Image.new("L", img.size, 0)
     m.paste(line_mask, (0, 0), region_mask)
@@ -191,18 +192,18 @@ def head_face(kind):
     w = h = 8 * S
     if kind == "front":
         img = fabric(w, h, RED, RED_DARK)
-        apply_lines(img, radial_web(w, h, 0.5, 0.62, spokes=12, ring_step=w / 4.6), Image.new("L", (w, h), 255))
+        apply_lines(img, radial_web(w, h, 0.5, 0.62, spokes=10, ring_step=w / 3.8), Image.new("L", (w, h), 255))
         return draw_eyes(img)
     if kind == "top":
         img = fabric(w, h, RED, RED_DARK)
-        apply_lines(img, radial_web(w, h, 0.5, 0.5, spokes=12, ring_step=w / 5.0), Image.new("L", (w, h), 255))
+        apply_lines(img, radial_web(w, h, 0.5, 0.5, spokes=10, ring_step=w / 4.0), Image.new("L", (w, h), 255))
         return img
     if kind == "bottom":
         img = fabric(w, h, RED_DARK, shade(RED_DARK, 0.6))
         return img
     img = fabric(w, h, RED, RED_DARK)
     cy = 0.62 if kind == "back" else 0.55
-    apply_lines(img, radial_web(w, h, 0.5, cy, spokes=10, ring_step=w / 5.0, rotation=0.3), Image.new("L", (w, h), 255))
+    apply_lines(img, radial_web(w, h, 0.5, cy, spokes=9, ring_step=w / 4.0, rotation=0.3), Image.new("L", (w, h), 255))
     return img
 
 
@@ -217,7 +218,7 @@ def torso_red(x, y):
 def body_face(kind):
     if kind in ("front", "back"):
         w, h = 8 * S, 12 * S
-        web = radial_web(w, h, 0.5, 0.27, spokes=14, ring_step=w / 5.0)
+        web = radial_web(w, h, 0.5, 0.27, spokes=12, ring_step=w / 4.0)
         belt = tube_web(w, h, columns=4, row_step=h / 9.0, sag=2)
         combined = Image.new("L", (w, h), 0)
         combined.paste(web, (0, 0), mask_from(w, h, lambda x, y: y < 0.86))
@@ -252,7 +253,7 @@ def arm_face(kind, side):
         return img
     outer = {"right": "right", "left": "left"}[side]
     inner = "left" if side == "right" else "right"
-    web = tube_web(w, h, columns=2, row_step=w / 1.5)
+    web = tube_web(w, h, columns=2, row_step=w / 1.15)
     if kind == outer:
         return two_tone(w, h, lambda x, y: True, web)
     if kind == inner:
@@ -269,7 +270,7 @@ def leg_face(kind):
         return fabric(w, w, BLUE, BLUE_DARK)
     if kind == "bottom":
         return fabric(w, w, shade(RED_DARK, 0.7), shade(RED_DARK, 0.5))
-    web = tube_web(w, h, columns=2, row_step=w / 1.5, offset=0.3)
+    web = tube_web(w, h, columns=2, row_step=w / 1.15, offset=0.3)
     if kind == "front":
         boot = lambda x, y: y > 0.56 + 0.10 * (1 - abs(x - 0.5) * 2)
     elif kind == "back":
@@ -464,6 +465,9 @@ def main():
         os.makedirs(preview_dir, exist_ok=True)
         preview(skin, os.path.join(preview_dir, "skin_doll.png"))
         skin.resize((512, 512), Image.NEAREST).save(os.path.join(preview_dir, "skin_atlas.png"))
+        doll = Image.open(os.path.join(preview_dir, "skin_doll.png"))
+        far = doll.resize((doll.width // 10, doll.height // 10), Image.NEAREST).resize((doll.width // 2, doll.height // 2), Image.NEAREST)
+        far.save(os.path.join(preview_dir, "skin_doll_far.png"))
         bg = Image.new("RGBA", (16, 16), (70, 78, 92, 255))
         bg.alpha_composite(shooter)
         bg.resize((256, 256), Image.NEAREST).save(os.path.join(preview_dir, "web_shooter_big.png"))

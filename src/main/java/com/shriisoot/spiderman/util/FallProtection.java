@@ -19,6 +19,14 @@ public final class FallProtection {
         player.resetFallDistance();
     }
 
+    public static void forget(ServerPlayer player) {
+        PROTECTED_UNTIL.remove(player.getUUID());
+    }
+
+    public static void clear() {
+        PROTECTED_UNTIL.clear();
+    }
+
     public static boolean isProtected(ServerPlayer player) {
         Long until = PROTECTED_UNTIL.get(player.getUUID());
         if (until == null) {

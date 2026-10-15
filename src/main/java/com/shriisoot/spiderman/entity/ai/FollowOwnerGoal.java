@@ -55,7 +55,7 @@ public class FollowOwnerGoal extends Goal {
     @Override
     public void tick() {
         Player owner = validOwner();
-        if (owner == null) {
+        if (owner == null || spidey.getMode() != SpiderManEntity.Mode.FOLLOW) {
             return;
         }
         spidey.getLookControl().setLookAt(owner, 10.0F, spidey.getMaxHeadXRot());

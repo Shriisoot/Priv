@@ -359,26 +359,32 @@ public class AutoTestClient implements ClientModInitializer {
             check("greeting sent", chatContains("[Spider-Man]"), "chat lines: " + chat.size());
         });
 
-        // --- idle shots (player stands behind the camera so he looks at us)
-        command("tp @s 3 " + G + " 9 180 0");
+        // --- idle shots: the owner stands just behind the camera (inside follow range) so he looks into the lens
+        command("tp @s 3.5 " + G + " 4.6 180 0");
+        run(() -> onServer(level -> {
+            SpiderManEntity s = serverSpidey(level);
+            s.setMode(SpiderManEntity.Mode.FOLLOW);
+            s.teleportTo(3.5, G, 0.5);
+            return null;
+        }));
         waitTicks(10);
-        camera(3, G + 1.55, 3.6, new Vec3(3, G + 1.05, 0));
+        camera(3.5, G + 1.55, 3.3, new Vec3(3.5, G + 1.05, 0.5));
         waitTicks(30);
         shot("01_idle_front");
-        camera(6.2, G + 1.4, 0.3, new Vec3(3, G + 1.0, 0));
+        camera(6.6, G + 1.4, 0.9, new Vec3(3.5, G + 1.0, 0.5));
         waitTicks(10);
         shot("02_idle_side");
-        camera(3.2, G + 1.6, -3.4, new Vec3(3, G + 1.0, 0));
+        camera(3.7, G + 1.6, -2.9, new Vec3(3.5, G + 1.0, 0.5));
         waitTicks(10);
         shot("03_idle_back");
 
         // --- perch
         command("spidey stay");
         waitTicks(60);
-        camera(3, G + 1.2, 3.4, new Vec3(3, G + 0.7, 0));
+        camera(3.5, G + 1.2, 3.3, new Vec3(3.5, G + 0.7, 0.5));
         waitTicks(5);
         shot("04_perch_front");
-        camera(6.0, G + 1.0, 1.0, new Vec3(3, G + 0.7, 0));
+        camera(6.4, G + 1.0, 1.4, new Vec3(3.5, G + 0.7, 0.5));
         waitTicks(5);
         shot("05_perch_side");
         run(() -> {
@@ -576,11 +582,11 @@ public class AutoTestClient implements ClientModInitializer {
         });
 
         // --- web-zip (sneak + use)
-        command("tp @s 50 " + G + " 32 180 -55");
+        command("tp @s 50 " + G + " 31 180 -64");
         waitTicks(10);
         run(() -> {
             mc.player.setYRot(180F);
-            mc.player.setXRot(-55F);
+            mc.player.setXRot(-64F);
             mc.options.keyShift.setDown(true);
             metrics.put("healthBeforeZip", mc.player.getHealth());
         });
@@ -618,18 +624,24 @@ public class AutoTestClient implements ClientModInitializer {
 
         // --- yank a mob with the web shooter
         command("tp @s 70 " + G + " 0 0 0");
-        command("summon minecraft:pig 70 " + G + " 14 0 0 {NoAI:1b}");
+        command("summon minecraft:pig 70 " + G + " 14 {NoAI:1b}");
         waitTicks(15);
         run(() -> {
             mc.player.setYRot(0F);
             mc.player.setXRot(4F);
-            metrics.put("pigStart", onServer(level -> level.getEntitiesOfClass(Pig.class, new AABB(60, -70, 0, 80, 0, 30)).get(0).position().z));
+            metrics.put("pigStart", onServer(level -> {
+                List<Pig> pigs = level.getEntitiesOfClass(Pig.class, new AABB(60, -70, 0, 80, 0, 30));
+                return pigs.isEmpty() ? Double.NaN : pigs.get(0).position().z;
+            }));
         });
         run(() -> mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND));
         waitTicks(30);
         run(() -> {
             double start = (double) metrics.get("pigStart");
-            double end = onServer(level -> level.getEntitiesOfClass(Pig.class, new AABB(60, -70, -10, 80, 0, 30)).get(0).position().z);
+            double end = onServer(level -> {
+                List<Pig> pigs = level.getEntitiesOfClass(Pig.class, new AABB(60, -70, -10, 80, 0, 30));
+                return pigs.isEmpty() ? Double.NaN : pigs.get(0).position().z;
+            });
             check("web yanks a mob toward the player", start - end > 4, String.format(Locale.ROOT, "pig moved %.1f blocks closer", start - end));
         });
 

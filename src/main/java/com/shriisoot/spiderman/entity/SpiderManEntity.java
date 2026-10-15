@@ -68,6 +68,9 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -102,6 +105,9 @@ public class SpiderManEntity extends PathfinderMob {
     private int orderGeneration;
     @Nullable private BlockPos workCenter;
     @Nullable private BlockPos stayPos;
+
+    // Drops he knocked loose, being reeled in on a web strand: entity UUID -> ticks left.
+    private final Map<UUID, Integer> reeling = new HashMap<>();
 
     private int animTicks;
     private int webCooldown;
@@ -307,8 +313,40 @@ public class SpiderManEntity extends PathfinderMob {
         if (tickCount % 30 == 0 && getHealth() < getMaxHealth()) {
             heal(1.0F);
         }
-        if (getMode() == Mode.WORK || getMode() == Mode.DELIVER) {
+        tickReeling();
+        if (getMode() == Mode.WORK || getMode() == Mode.DELIVER || !reeling.isEmpty()) {
             pickUpNearbyItems();
+        }
+    }
+
+    public boolean hasPendingDrops() {
+        return !reeling.isEmpty();
+    }
+
+    private void tickReeling() {
+        if (reeling.isEmpty() || !(level() instanceof ServerLevel server)) {
+            return;
+        }
+        Vec3 chest = position().add(0, 0.9, 0);
+        Iterator<Map.Entry<UUID, Integer>> it = reeling.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<UUID, Integer> entry = it.next();
+            Entity entity = server.getEntity(entry.getKey());
+            int left = entry.getValue() - 1;
+            if (!(entity instanceof ItemEntity item) || !item.isAlive() || left <= 0) {
+                it.remove();
+                continue;
+            }
+            entry.setValue(left);
+            Vec3 to = chest.subtract(item.position());
+            double dist = to.length();
+            if (dist > 0.8) {
+                Vec3 pull = to.scale(Math.min(0.8, 0.22 + dist * 0.12) / dist);
+                // Cancel item gravity and hop over anything it snags on.
+                double lift = item.horizontalCollision ? 0.35 : 0.04;
+                item.setDeltaMovement(pull.x, pull.y + lift, pull.z);
+                item.hasImpulse = true;
+            }
         }
     }
 
@@ -436,30 +474,30 @@ public class SpiderManEntity extends PathfinderMob {
         }
     }
 
-    /** Breaks a block like a pro and flings the drops back to himself. */
-    public boolean harvest(BlockPos pos, Resource resource, boolean viaWeb) {
+    /** Breaks a block like a pro and reels the drops back in on a strand of web. Returns the spawned drops. */
+    public List<ItemEntity> harvest(BlockPos pos, Resource resource, boolean viaWeb) {
         if (!(level() instanceof ServerLevel server)) {
-            return false;
+            return List.of();
         }
         BlockState state = server.getBlockState(pos);
         if (!resource.matches(state)) {
-            return false;
+            return List.of();
         }
         BlockEntity blockEntity = server.getBlockEntity(pos);
         List<ItemStack> drops = Block.getDrops(state, server, pos, blockEntity, this, resource.tool());
         server.destroyBlock(pos, false, this);
         Vec3 from = Vec3.atCenterOf(pos);
-        Vec3 to = position().add(0, 0.9, 0);
-        int flightTicks = viaWeb ? 10 : 5;
+        List<ItemEntity> spawned = new ArrayList<>();
         for (ItemStack drop : drops) {
             ItemEntity item = new ItemEntity(server, from.x, from.y, from.z, drop);
             item.setPickUpDelay(2);
-            Vec3 delta = to.subtract(from);
-            item.setDeltaMovement(delta.x / flightTicks, delta.y / flightTicks + 0.04 * flightTicks / 2.0, delta.z / flightTicks);
+            item.setDeltaMovement(0, viaWeb ? 0.1 : 0.2, 0);
             server.addFreshEntity(item);
+            reeling.put(item.getUUID(), 80);
+            spawned.add(item);
         }
         orderProgress++;
-        return true;
+        return spawned;
     }
 
     // ---------------------------------------------------------------- orders & dialogue
@@ -574,6 +612,10 @@ public class SpiderManEntity extends PathfinderMob {
     }
 
     public void handOverTo(Player owner) {
+        if (inventory.isEmpty()) {
+            setMode(Mode.FOLLOW);
+            return;
+        }
         Map<Item, Integer> summary = new LinkedHashMap<>();
         for (int i = 0; i < inventory.getContainerSize(); i++) {
             ItemStack stack = inventory.removeItemNoUpdate(i);

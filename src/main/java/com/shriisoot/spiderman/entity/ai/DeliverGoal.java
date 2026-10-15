@@ -47,7 +47,8 @@ public class DeliverGoal extends Goal {
     @Override
     public void tick() {
         Player owner = validOwner();
-        if (owner == null) {
+        // GoalSelector ticks running goals on alternate ticks without re-checking canContinueToUse.
+        if (owner == null || spidey.getMode() != SpiderManEntity.Mode.DELIVER) {
             return;
         }
         spidey.getLookControl().setLookAt(owner, 30.0F, spidey.getMaxHeadXRot());

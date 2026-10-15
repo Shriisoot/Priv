@@ -7,6 +7,7 @@ import com.shriisoot.spiderman.entity.SpiderManEntity;
 import com.shriisoot.spiderman.entity.WebLineEntity;
 import com.shriisoot.spiderman.registry.ModItems;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.culling.Frustum;
@@ -24,7 +25,7 @@ import net.minecraft.world.phys.Vec3;
 /** Draws the web strand from the shooter's hand to the anchor as two crossed ribbons, plus a splat where it sticks. */
 public class WebLineRenderer extends EntityRenderer<WebLineEntity> {
     private static final ResourceLocation TEXTURE = SpiderManMod.id("textures/entity/web_line.png");
-    private static final float HALF_WIDTH = 0.032F;
+    private static final float HALF_WIDTH = 0.04F;
     private static final int SEGMENTS = 16;
 
     public WebLineRenderer(EntityRendererProvider.Context context) {
@@ -50,6 +51,10 @@ public class WebLineRenderer extends EntityRenderer<WebLineEntity> {
         }
         Vec3 tip = web.getPosition(partialTick);
         Vec3 hand = handPosition(owner, tip, partialTick);
+        // An anchored web sits inside the block it stuck to (light 0), so light it like its shooter instead.
+        int ownerLight = entityRenderDispatcher.getPackedLightCoords(owner, partialTick);
+        light = LightTexture.pack(Math.max(LightTexture.block(light), LightTexture.block(ownerLight)),
+                Math.max(LightTexture.sky(light), LightTexture.sky(ownerLight)));
 
         // Webs that spawn already stuck (Spider-Man's yanks/zips) visibly shoot out over a few frames.
         float extend = web.getMode() == WebLineEntity.MODE_YANK ? Mth.clamp((web.tickCount + partialTick) / 3.0F, 0F, 1F) : 1F;
