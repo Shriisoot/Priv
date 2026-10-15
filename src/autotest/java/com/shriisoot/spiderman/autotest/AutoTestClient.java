@@ -72,6 +72,7 @@ public class AutoTestClient implements ClientModInitializer {
     private int cameraId = -1;
     private int webShots;
     private int zipShots;
+    private int punchShots;
 
     private interface Step {
         boolean tick();
@@ -284,6 +285,12 @@ public class AutoTestClient implements ClientModInitializer {
             screenshot(String.format(Locale.ROOT, "pose_web_%02d", webShots++));
             metrics.put("sawWebPose", true);
         }
+        if (s.getAttackAnim(1F) > 0.3F) {
+            metrics.put("sawPunchSwing", true);
+            if (punchShots < 4 && ticks % 2 == 0) {
+                screenshot(String.format(Locale.ROOT, "pose_punch_%02d", punchShots++));
+            }
+        }
         if (s.getAnim() == SpiderManEntity.ANIM_ZIP && s.zipPose > 0.8F && zipShots < 4 && ticks % 3 == 0) {
             screenshot(String.format(Locale.ROOT, "pose_zip_%02d", zipShots++));
             metrics.put("sawZipPose", true);
@@ -435,6 +442,7 @@ public class AutoTestClient implements ClientModInitializer {
             boolean empty = onServer(level -> serverSpidey(level).getInventory().isEmpty());
             check("spider-man handed over everything", empty, "inventory empty=" + empty);
             check("web-yank pose observed", metrics.containsKey("sawWebPose"), "web pose screenshots: " + webShots);
+            check("punch swing animates", metrics.containsKey("sawPunchSwing"), "punch screenshots: " + punchShots);
         });
         shot("07_after_gather");
 

@@ -100,10 +100,10 @@ public class SpiderManModel extends PlayerModel<SpiderManEntity> {
         rightLeg.z = Mth.lerp(w, rightLeg.z, hipZ);
         leftLeg.y = Mth.lerp(w, leftLeg.y, hipY);
         leftLeg.z = Mth.lerp(w, leftLeg.z, hipZ);
-        rightLeg.xRot = Mth.lerp(w, rightLeg.xRot, -0.85F);
+        rightLeg.xRot = Mth.lerp(w, rightLeg.xRot, -0.95F);
         rightLeg.yRot = Mth.lerp(w, rightLeg.yRot, 0.25F);
         rightLeg.zRot = Mth.lerp(w, rightLeg.zRot, 0.3F);
-        leftLeg.xRot = Mth.lerp(w, leftLeg.xRot, -0.8F);
+        leftLeg.xRot = Mth.lerp(w, leftLeg.xRot, -0.95F);
         leftLeg.yRot = Mth.lerp(w, leftLeg.yRot, -0.25F);
         leftLeg.zRot = Mth.lerp(w, leftLeg.zRot, -0.3F);
     }

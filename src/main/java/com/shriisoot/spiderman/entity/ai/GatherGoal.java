@@ -253,6 +253,7 @@ public class GatherGoal extends Goal {
             List<ItemEntity> drops = spidey.harvest(target, resource, true);
             if (web != null && web.isAlive() && !drops.isEmpty()) {
                 web.hookOnto(drops.get(0), 30);
+                spidey.playAnim(SpiderManEntity.ANIM_WEB, 14);
                 web = null;
             } else {
                 discardWeb();

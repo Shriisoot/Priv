@@ -121,6 +121,8 @@ public class SpiderManEntity extends PathfinderMob {
 
     // Drops he knocked loose, being reeled in on a web strand: entity UUID -> ticks left.
     private final Map<UUID, Integer> reeling = new HashMap<>();
+    private static final int REEL_TICKS = 80;
+    private static final int CATCH_AFTER = 14;
     // Everything he broke loose himself. He only ever picks these up, so nobody's death pile gets "delivered".
     private final Set<UUID> ownDrops = new HashSet<>();
 
@@ -326,6 +328,8 @@ public class SpiderManEntity extends PathfinderMob {
 
     @Override
     public void aiStep() {
+        // Vanilla only advances the arm-swing timer for monsters and players; without this his punches never animate.
+        updateSwingTime();
         super.aiStep();
         if (level().isClientSide) {
             return;
@@ -373,6 +377,15 @@ public class SpiderManEntity extends PathfinderMob {
             entry.setValue(left);
             Vec3 to = chest.subtract(item.position());
             double dist = to.length();
+            // Snagged in leaves or still on its way after a moment: snatch it. The client plays the vanilla
+            // pickup animation, so the item visibly zips into his hands from wherever it was.
+            if (REEL_TICKS - left >= CATCH_AFTER && dist < 32) {
+                collect(item);
+                if (!item.isAlive()) {
+                    it.remove();
+                }
+                continue;
+            }
             if (dist > 0.8) {
                 Vec3 pull = to.scale(Math.min(0.8, 0.22 + dist * 0.12) / dist);
                 // Cancel item gravity and hop over anything it snags on.
@@ -400,16 +413,20 @@ public class SpiderManEntity extends PathfinderMob {
         List<ItemEntity> items = level().getEntitiesOfClass(ItemEntity.class, getBoundingBox().inflate(1.8, 1.2, 1.8),
                 e -> e.isAlive() && !e.getItem().isEmpty() && !e.hasPickUpDelay() && ownDrops.contains(e.getUUID()));
         for (ItemEntity item : items) {
-            ItemStack stack = item.getItem();
-            ItemStack remainder = inventory.addItem(stack.copy());
-            int taken = stack.getCount() - remainder.getCount();
-            if (taken > 0) {
-                take(item, taken);
-                if (remainder.isEmpty()) {
-                    item.discard();
-                } else {
-                    item.setItem(remainder);
-                }
+            collect(item);
+        }
+    }
+
+    private void collect(ItemEntity item) {
+        ItemStack stack = item.getItem();
+        ItemStack remainder = inventory.addItem(stack.copy());
+        int taken = stack.getCount() - remainder.getCount();
+        if (taken > 0) {
+            take(item, taken);
+            if (remainder.isEmpty()) {
+                item.discard();
+            } else {
+                item.setItem(remainder);
             }
         }
     }
@@ -535,7 +552,7 @@ public class SpiderManEntity extends PathfinderMob {
             item.setPickUpDelay(2);
             item.setDeltaMovement(0, viaWeb ? 0.1 : 0.2, 0);
             server.addFreshEntity(item);
-            reeling.put(item.getUUID(), 80);
+            reeling.put(item.getUUID(), REEL_TICKS);
             ownDrops.add(item.getUUID());
             spawned.add(item);
         }
