@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "spiderman_autotest",
+  "version": "1.0.0",
+  "name": "Spider-Man Autotest (dev only)",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["com.shriisoot.spiderman.autotest.AutoTestClient"]
+  },
+  "depends": {
+    "spiderman": "*",
+    "fabric-api": "*"
+  }
+}

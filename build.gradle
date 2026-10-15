@@ -11,11 +11,36 @@ base {
 
 loom {
     splitEnvironmentSourceSets()
+}
 
+sourceSets {
+    // Dev-only end-to-end test mod; never packaged into the release jar.
+    autotest {
+        compileClasspath += sourceSets.client.compileClasspath + sourceSets.client.output + sourceSets.main.output
+        runtimeClasspath += sourceSets.client.runtimeClasspath + sourceSets.client.output + sourceSets.main.output
+    }
+}
+
+loom {
     mods {
         "spiderman" {
             sourceSet sourceSets.main
             sourceSet sourceSets.client
+        }
+        "spiderman_autotest" {
+            sourceSet sourceSets.autotest
+        }
+    }
+
+    runs {
+        // Headless end-to-end test: xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew runAutotest
+        autotest {
+            client()
+            name = "Autotest Client"
+            source sourceSets.autotest
+            runDir = "run-autotest"
+            vmArg "-Dspiderman.autotest=true"
+            programArgs "--width", "1280", "--height", "720"
         }
     }
 }
