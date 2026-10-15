@@ -30,6 +30,11 @@ public class HoldPositionGoal extends Goal {
     }
 
     @Override
+    public void stop() {
+        spidey.getNavigation().stop();
+    }
+
+    @Override
     public void start() {
         BlockPos post = spidey.getStayPos();
         if (post != null) {

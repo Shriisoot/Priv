@@ -98,7 +98,7 @@ It checks the following:
 - beating a zombie
 - player web-swing lift, jump-release, sneak-zip, no fall damage, and yanking a mob
 
-Latest results: 20/20 passing, on three consecutive runs with different random tree shapes.
+Latest results: 20/20 passing, on four consecutive runs with different random tree shapes.
 
 ## Regenerating assets
 

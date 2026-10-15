@@ -537,9 +537,7 @@ public class SpiderManEntity extends PathfinderMob {
         if (!resource.matches(state)) {
             return List.of();
         }
-        // Like every vanilla block-breaking mob, he obeys mobGriefing; and he can't break what his owner couldn't
-        // (spawn protection, claim mods that hook mayInteract).
-        if (!canGrief() || (getOwner() instanceof ServerPlayer owner && !server.mayInteract(owner, pos))) {
+        if (!mayBreak(pos)) {
             return List.of();
         }
         BlockEntity blockEntity = server.getBlockEntity(pos);
@@ -648,6 +646,16 @@ public class SpiderManEntity extends PathfinderMob {
         if (t.contains(" few ") || t.contains(" couple ")) return 5;
         if (t.contains(" all ")) return 128;
         return 16;
+    }
+
+    /**
+     * Like every vanilla block-breaking mob he obeys mobGriefing, and he can't break what his owner couldn't
+     * (spawn protection, and claim mods that hook mayInteract). With the owner offline nothing is checked, so nothing is broken.
+     */
+    public boolean mayBreak(BlockPos pos) {
+        return canGrief() && level() instanceof ServerLevel server && getOwnerUUID() != null
+                && server.getServer().getPlayerList().getPlayer(getOwnerUUID()) instanceof ServerPlayer owner
+                && owner.serverLevel().mayInteract(owner, pos);
     }
 
     public boolean canGrief() {

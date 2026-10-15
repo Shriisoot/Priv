@@ -25,9 +25,11 @@ final class TravelHelper {
         }
         // Re-path while swimming or climbing too, or he bobs in place forever once his last path runs out mid-lake.
         if (repath.getAsBoolean() && (spidey.onGround() || spidey.isInWater() || spidey.onClimbable())) {
-            boolean moving = spidey.getNavigation().moveTo(target, dist > 9 ? 1.5 : 1.15);
-            if (!moving && dist > 10 && spidey.canZip()) {
+            // Across lava, ravines or water the pathfinder only returns a partial path: zip over it instead.
+            if (dist > 10 && spidey.canZip() && spidey.getNavigation() instanceof SpiderManNavigation nav && !nav.canReach(target)) {
                 spidey.webZipToward(target.position());
+            } else {
+                spidey.getNavigation().moveTo(target, dist > 9 ? 1.5 : 1.15);
             }
         }
     }

@@ -124,6 +124,10 @@ public class GatherGoal extends Goal {
             spidey.finishOrder("My web-pockets are full! Bringing it all back.");
             return;
         }
+        if (!spidey.canGrief()) {
+            spidey.finishOrder("The mobGriefing rule just got turned off, so I have to stop breaking blocks.");
+            return;
+        }
         phaseTicks++;
         switch (phase) {
             case SEARCH -> tickSearch(resource);
@@ -230,7 +234,9 @@ public class GatherGoal extends Goal {
         level().destroyBlockProgress(spidey.getId(), target, stage);
         if (phaseTicks >= breakTime) {
             clearCrack();
-            spidey.harvest(target, resource, false);
+            if (spidey.harvest(target, resource, false).isEmpty()) {
+                blacklist.add(target.asLong());
+            }
             target = null;
             searchCooldown = 0;
             setPhase(Phase.SEARCH);
@@ -251,6 +257,9 @@ public class GatherGoal extends Goal {
         if (phaseTicks >= WEB_TUG_TICKS) {
             clearCrack();
             List<ItemEntity> drops = spidey.harvest(target, resource, true);
+            if (drops.isEmpty()) {
+                blacklist.add(target.asLong());
+            }
             if (web != null && web.isAlive() && !drops.isEmpty()) {
                 web.hookOnto(drops.get(0), 30);
                 spidey.playAnim(SpiderManEntity.ANIM_WEB, 14);
@@ -280,7 +289,10 @@ public class GatherGoal extends Goal {
         spidey.getLookControl().setLookAt(drop, 30.0F, 30.0F);
         if (--repathTimer <= 0) {
             repathTimer = adjustedTickDelay(10);
-            if (!spidey.getNavigation().moveTo(drop, 1.25) && phaseTicks > 40) {
+            boolean reachable = spidey.getNavigation() instanceof SpiderManNavigation nav && nav.canReach(drop);
+            if (reachable) {
+                spidey.getNavigation().moveTo(drop, 1.25);
+            } else if (phaseTicks > 40) {
                 ignoredDrops.add(drop.getUUID());
                 collectTarget = null;
                 setPhase(Phase.SEARCH);
@@ -341,7 +353,7 @@ public class GatherGoal extends Goal {
                         continue;
                     }
                     BlockState state = level.getBlockState(cursor);
-                    if (!resource.matches(state) || !isExposed(cursor)) {
+                    if (!resource.matches(state) || !isExposed(cursor) || !spidey.mayBreak(cursor)) {
                         continue;
                     }
                     if (resource.needsNaturalCheck() && !isNaturalTree(cursor)) {

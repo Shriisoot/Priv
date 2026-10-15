@@ -33,6 +33,12 @@ public class SpiderManNavigation extends GroundPathNavigation {
         return super.createPath(entity, accuracy);
     }
 
+    /** True when a path exists that actually ends at the entity (not just a best-effort partial path). */
+    public boolean canReach(Entity entity) {
+        Path path = super.createPath(entity, 1);
+        return path != null && path.canReach();
+    }
+
     @Override
     public boolean moveTo(Entity entity, double speed) {
         Path path = this.createPath(entity, 0);
@@ -65,7 +71,8 @@ public class SpiderManNavigation extends GroundPathNavigation {
         if (arrived) {
             this.directTarget = null;
         } else {
-            this.mob.getMoveControl().setWantedPosition(this.directTarget.getX(), this.directTarget.getY(), this.directTarget.getZ(), this.speedModifier);
+            // Aim at the block centre: the arrival test is centre-based, so aiming at the corner circles forever.
+            this.mob.getMoveControl().setWantedPosition(this.directTarget.getX() + 0.5, this.directTarget.getY(), this.directTarget.getZ() + 0.5, this.speedModifier);
         }
     }
 }
