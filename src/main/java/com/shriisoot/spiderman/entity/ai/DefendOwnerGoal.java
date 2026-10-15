@@ -34,14 +34,16 @@ public class DefendOwnerGoal extends TargetGoal {
         if (owner == null || !owner.isAlive() || owner.level() != spidey.level()) {
             return false;
         }
+        // Only fresh fights count: a new or reloaded Spider-Man must not avenge a hit from an hour ago.
+        int recent = owner.tickCount - 100;
         LivingEntity attacker = owner.getLastHurtByMob();
-        if (owner.getLastHurtByMobTimestamp() != lastHurtByTimestamp && valid(attacker)) {
+        if (owner.getLastHurtByMobTimestamp() != lastHurtByTimestamp && owner.getLastHurtByMobTimestamp() > recent && valid(attacker)) {
             pending = attacker;
             lastHurtByTimestamp = owner.getLastHurtByMobTimestamp();
             return true;
         }
         LivingEntity victim = owner.getLastHurtMob();
-        if (owner.getLastHurtMobTimestamp() != lastHurtTimestamp && valid(victim)) {
+        if (owner.getLastHurtMobTimestamp() != lastHurtTimestamp && owner.getLastHurtMobTimestamp() > recent && valid(victim)) {
             pending = victim;
             lastHurtTimestamp = owner.getLastHurtMobTimestamp();
             return true;

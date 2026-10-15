@@ -21,6 +21,7 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayDeque;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -296,7 +297,7 @@ public class GatherGoal extends Goal {
     private ItemEntity findDrop() {
         BlockPos center = spidey.getWorkCenter() != null ? spidey.getWorkCenter() : spidey.blockPosition();
         List<ItemEntity> drops = level().getEntitiesOfClass(ItemEntity.class, spidey.getBoundingBox().inflate(10, 5, 10),
-                e -> e.isAlive() && e.onGround() && e.getOwner() == null && !ignoredDrops.contains(e.getUUID())
+                e -> e.isAlive() && e.onGround() && spidey.isOwnDrop(e) && !ignoredDrops.contains(e.getUUID())
                         && e.blockPosition().distSqr(center) < MAX_WANDER * MAX_WANDER);
         ItemEntity best = null;
         double bestDistance = Double.MAX_VALUE;
@@ -366,17 +367,31 @@ public class GatherGoal extends Goal {
         return false;
     }
 
-    /** Only chop logs that have natural (non-player-placed) leaves nearby, so he never takes your house apart. */
+    /**
+     * A log counts as part of a natural tree only if it connects, log to log, to a log that touches natural
+     * (non-player-placed) leaves. Cabins at the edge of a forest stay intact.
+     */
     private boolean isNaturalTree(BlockPos log) {
         Level level = level();
-        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
-        for (int dy = -2; dy <= 8; dy++) {
-            for (int dx = -3; dx <= 3; dx++) {
-                for (int dz = -3; dz <= 3; dz++) {
-                    p.set(log.getX() + dx, log.getY() + dy, log.getZ() + dz);
-                    BlockState s = level.getBlockState(p);
-                    if (s.is(BlockTags.LEAVES) && s.hasProperty(LeavesBlock.PERSISTENT) && !s.getValue(LeavesBlock.PERSISTENT)) {
-                        return true;
+        Set<Long> seen = new HashSet<>();
+        ArrayDeque<BlockPos> queue = new ArrayDeque<>();
+        queue.add(log);
+        seen.add(log.asLong());
+        BlockPos.MutableBlockPos n = new BlockPos.MutableBlockPos();
+        while (!queue.isEmpty() && seen.size() <= 96) {
+            BlockPos current = queue.poll();
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dy = -1; dy <= 1; dy++) {
+                    for (int dz = -1; dz <= 1; dz++) {
+                        if (dx == 0 && dy == 0 && dz == 0) continue;
+                        n.set(current.getX() + dx, current.getY() + dy, current.getZ() + dz);
+                        BlockState s = level.getBlockState(n);
+                        if (s.is(BlockTags.LEAVES) && s.hasProperty(LeavesBlock.PERSISTENT) && !s.getValue(LeavesBlock.PERSISTENT)) {
+                            return true;
+                        }
+                        if (s.is(BlockTags.LOGS) && n.getY() >= log.getY() - 2 && n.getY() <= log.getY() + 32 && seen.add(n.asLong())) {
+                            queue.add(n.immutable());
+                        }
                     }
                 }
             }

@@ -117,6 +117,10 @@ public class WebLineEntity extends Projectile {
         return id < 0 ? null : level().getEntity(id);
     }
 
+    public boolean hasLostHook() {
+        return this.entityData.get(DATA_HOOKED_ID) >= 0 && getHookedEntity() == null;
+    }
+
     public boolean isAnchored() {
         return this.entityData.get(DATA_ANCHORED);
     }
@@ -155,6 +159,13 @@ public class WebLineEntity extends Projectile {
         Entity hooked = getHookedEntity();
         if (hooked != null) {
             tickHooked(hooked, owner);
+            return;
+        }
+        if (this.entityData.get(DATA_HOOKED_ID) >= 0) {
+            // Whatever it was hooked to is gone (picked up, killed, unloaded).
+            if (!level().isClientSide) {
+                discard();
+            }
             return;
         }
 

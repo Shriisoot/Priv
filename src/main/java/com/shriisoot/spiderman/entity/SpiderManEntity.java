@@ -19,6 +19,7 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.DamageTypeTags;
@@ -58,7 +59,9 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -77,6 +80,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -116,6 +121,8 @@ public class SpiderManEntity extends PathfinderMob {
 
     // Drops he knocked loose, being reeled in on a web strand: entity UUID -> ticks left.
     private final Map<UUID, Integer> reeling = new HashMap<>();
+    // Everything he broke loose himself. He only ever picks these up, so nobody's death pile gets "delivered".
+    private final Set<UUID> ownDrops = new HashSet<>();
 
     private int animTicks;
     private int webCooldown;
@@ -333,9 +340,16 @@ public class SpiderManEntity extends PathfinderMob {
             heal(1.0F);
         }
         tickReeling();
+        if (tickCount % 100 == 0 && !ownDrops.isEmpty() && level() instanceof ServerLevel server) {
+            ownDrops.removeIf(id -> !(server.getEntity(id) instanceof ItemEntity item) || !item.isAlive());
+        }
         if (getMode() == Mode.WORK || getMode() == Mode.DELIVER || !reeling.isEmpty()) {
             pickUpNearbyItems();
         }
+    }
+
+    public boolean isOwnDrop(ItemEntity item) {
+        return ownDrops.contains(item.getUUID());
     }
 
     public boolean hasPendingDrops() {
@@ -384,7 +398,7 @@ public class SpiderManEntity extends PathfinderMob {
 
     private void pickUpNearbyItems() {
         List<ItemEntity> items = level().getEntitiesOfClass(ItemEntity.class, getBoundingBox().inflate(1.8, 1.2, 1.8),
-                e -> e.isAlive() && !e.getItem().isEmpty() && !e.hasPickUpDelay() && e.getOwner() == null);
+                e -> e.isAlive() && !e.getItem().isEmpty() && !e.hasPickUpDelay() && ownDrops.contains(e.getUUID()));
         for (ItemEntity item : items) {
             ItemStack stack = item.getItem();
             ItemStack remainder = inventory.addItem(stack.copy());
@@ -506,6 +520,11 @@ public class SpiderManEntity extends PathfinderMob {
         if (!resource.matches(state)) {
             return List.of();
         }
+        // Like every vanilla block-breaking mob, he obeys mobGriefing; and he can't break what his owner couldn't
+        // (spawn protection, claim mods that hook mayInteract).
+        if (!canGrief() || (getOwner() instanceof ServerPlayer owner && !server.mayInteract(owner, pos))) {
+            return List.of();
+        }
         BlockEntity blockEntity = server.getBlockEntity(pos);
         List<ItemStack> drops = Block.getDrops(state, server, pos, blockEntity, this, resource.tool());
         server.destroyBlock(pos, false, this);
@@ -517,13 +536,14 @@ public class SpiderManEntity extends PathfinderMob {
             item.setDeltaMovement(0, viaWeb ? 0.1 : 0.2, 0);
             server.addFreshEntity(item);
             reeling.put(item.getUUID(), 80);
+            ownDrops.add(item.getUUID());
             spawned.add(item);
         }
         int gathered = 0;
         for (ItemStack drop : drops) {
             gathered += drop.getCount();
         }
-        orderProgress += Math.max(1, gathered);
+        orderProgress += gathered;
         return spawned;
     }
 
@@ -613,7 +633,15 @@ public class SpiderManEntity extends PathfinderMob {
         return 16;
     }
 
+    public boolean canGrief() {
+        return level().getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING);
+    }
+
     public void startOrder(Resource resource, int amount) {
+        if (!canGrief()) {
+            say("This world has the mobGriefing rule turned off, so I'm not allowed to break blocks. (/gamerule mobGriefing true)");
+            return;
+        }
         setMode(Mode.WORK);
         this.orderResource = resource;
         this.orderTarget = amount;
@@ -791,6 +819,12 @@ public class SpiderManEntity extends PathfinderMob {
             say("Ugh... I'll be back, neighbor...");
         }
         super.die(source);
+    }
+
+    @Override
+    public boolean checkSpawnRules(LevelAccessor level, MobSpawnType spawnType) {
+        // Never from spawners: a crafted egg on a dungeon spawner would otherwise mint endless helpers.
+        return spawnType != MobSpawnType.SPAWNER && spawnType != MobSpawnType.TRIAL_SPAWNER && super.checkSpawnRules(level, spawnType);
     }
 
     @Override

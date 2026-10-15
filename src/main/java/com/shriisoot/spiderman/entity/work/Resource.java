@@ -25,7 +25,7 @@ public enum Resource {
     LAPIS("lapis", tag(BlockTags.LAPIS_ORES), Items.DIAMOND_PICKAXE, "lapis", "lazuli"),
     DIAMOND("diamonds", tag(BlockTags.DIAMOND_ORES), Items.DIAMOND_PICKAXE, "diamond", "diamonds"),
     EMERALD("emeralds", tag(BlockTags.EMERALD_ORES), Items.DIAMOND_PICKAXE, "emerald", "emeralds"),
-    SAND("sand", tag(BlockTags.SAND), Items.DIAMOND_SHOVEL, "sand"),
+    SAND("sand", state -> state.is(BlockTags.SAND) && !state.is(Blocks.SUSPICIOUS_SAND), Items.DIAMOND_SHOVEL, "sand"),
     GRAVEL("gravel", blocks(Blocks.GRAVEL), Items.DIAMOND_SHOVEL, "gravel", "flint"),
     CLAY("clay", blocks(Blocks.CLAY), Items.DIAMOND_SHOVEL, "clay"),
     DIRT("dirt", blocks(Blocks.DIRT, Blocks.COARSE_DIRT, Blocks.ROOTED_DIRT), Items.DIAMOND_SHOVEL, "dirt", "soil");

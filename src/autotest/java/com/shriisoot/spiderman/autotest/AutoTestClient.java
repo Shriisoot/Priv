@@ -438,6 +438,26 @@ public class AutoTestClient implements ClientModInitializer {
         });
         shot("07_after_gather");
 
+        // --- natural-language edge cases
+        command("spidey don't leave the tree alone");
+        waitTicks(5);
+        run(() -> check("'don't leave ...' does not dismiss him", onServer(level -> serverSpidey(level) != null), "still here"));
+        command("spidey stop chopping wood");
+        waitTicks(5);
+        run(() -> {
+            String mode = onServer(level -> String.valueOf(serverSpidey(level).getMode()));
+            check("'stop chopping wood' means stay, not a new job", mode.equals("STAY"), "mode=" + mode);
+        });
+        command("gamerule mobGriefing false");
+        command("spidey get 5 wood");
+        waitTicks(5);
+        run(() -> {
+            String mode = onServer(level -> String.valueOf(serverSpidey(level).getMode()));
+            check("respects mobGriefing=false", !mode.equals("WORK") && chatContains("mobGriefing"), "mode=" + mode);
+        });
+        command("gamerule mobGriefing true");
+        command("spidey follow");
+
         // --- wall climb (player becomes a spectator so Spider-Man stops following)
         command("gamemode spectator");
         command("tp @s 0 " + G + " 2");

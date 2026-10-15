@@ -56,7 +56,8 @@ public class SpiderManModel extends PlayerModel<SpiderManEntity> {
 
     /** Bigger, snappier arm drive when sprinting, plus a slight forward lean of the head. */
     private void athleticRun(float limbSwing, float amount) {
-        float run = Mth.clamp((amount - 0.45F) / 0.4F, 0F, 1F);
+        // Fade out while a punch is playing, or the run cycle would overwrite the swing.
+        float run = Mth.clamp((amount - 0.45F) / 0.4F, 0F, 1F) * (1F - Mth.sin(attackTime * Mth.PI));
         if (run <= 0) {
             return;
         }
@@ -69,7 +70,7 @@ public class SpiderManModel extends PlayerModel<SpiderManEntity> {
         leftLeg.xRot = Mth.lerp(run, leftLeg.xRot, -swing * 1.2F);
     }
 
-    /** The iconic low crouch: leaning in, one fist on the ground, the other arm on the knee, eyes up. */
+    /** The iconic low crouch: leaning in, arms forward and ready, knees out, eyes up. */
     private void perch(float w, float age) {
         float breathe = Mth.sin(age * 0.08F) * 0.03F;
         float lean = 0.72F + breathe;
@@ -88,9 +89,9 @@ public class SpiderManModel extends PlayerModel<SpiderManEntity> {
         rightArm.z = Mth.lerp(w, rightArm.z, shoulderZ);
         leftArm.y = Mth.lerp(w, leftArm.y, shoulderY);
         leftArm.z = Mth.lerp(w, leftArm.z, shoulderZ);
-        rightArm.xRot = Mth.lerp(w, rightArm.xRot, -0.25F);
-        rightArm.yRot = Mth.lerp(w, rightArm.yRot, 0.15F);
-        rightArm.zRot = Mth.lerp(w, rightArm.zRot, 0.12F);
+        rightArm.xRot = Mth.lerp(w, rightArm.xRot, -0.55F - breathe);
+        rightArm.yRot = Mth.lerp(w, rightArm.yRot, 0.2F);
+        rightArm.zRot = Mth.lerp(w, rightArm.zRot, 0.15F);
         leftArm.xRot = Mth.lerp(w, leftArm.xRot, -1.05F + breathe);
         leftArm.yRot = Mth.lerp(w, leftArm.yRot, -0.35F);
         leftArm.zRot = Mth.lerp(w, leftArm.zRot, -0.2F);
@@ -99,10 +100,10 @@ public class SpiderManModel extends PlayerModel<SpiderManEntity> {
         rightLeg.z = Mth.lerp(w, rightLeg.z, hipZ);
         leftLeg.y = Mth.lerp(w, leftLeg.y, hipY);
         leftLeg.z = Mth.lerp(w, leftLeg.z, hipZ);
-        rightLeg.xRot = Mth.lerp(w, rightLeg.xRot, -0.95F);
+        rightLeg.xRot = Mth.lerp(w, rightLeg.xRot, -0.85F);
         rightLeg.yRot = Mth.lerp(w, rightLeg.yRot, 0.25F);
         rightLeg.zRot = Mth.lerp(w, rightLeg.zRot, 0.3F);
-        leftLeg.xRot = Mth.lerp(w, leftLeg.xRot, -0.6F);
+        leftLeg.xRot = Mth.lerp(w, leftLeg.xRot, -0.8F);
         leftLeg.yRot = Mth.lerp(w, leftLeg.yRot, -0.25F);
         leftLeg.zRot = Mth.lerp(w, leftLeg.zRot, -0.3F);
     }

@@ -46,7 +46,7 @@ public class WebLineRenderer extends EntityRenderer<WebLineEntity> {
     @Override
     public void render(WebLineEntity web, float yaw, float partialTick, PoseStack poseStack, MultiBufferSource buffers, int light) {
         Entity owner = web.getOwnerEntity();
-        if (owner == null) {
+        if (owner == null || web.hasLostHook()) {
             return;
         }
         Vec3 tip = web.getPosition(partialTick);
@@ -89,12 +89,19 @@ public class WebLineRenderer extends EntityRenderer<WebLineEntity> {
             Vec3 right = new Vec3(-Mth.cos(bodyYaw), 0, -Mth.sin(bodyYaw));
             double shoulderHeight = living.getBbHeight() * 0.74 - (living.isCrouching() ? 0.2 : 0.0);
             Vec3 shoulder = living.getPosition(partialTick).add(0, shoulderHeight, 0).add(right.scale(side * 0.33 * living.getScale()));
-            if (living instanceof SpiderManEntity spidey && spidey.zipPose > 0.5F) {
-                return shoulder.add(0, 0.7, 0);
-            }
             Vec3 toTip = tip.subtract(shoulder);
             double length = toTip.length();
-            return length < 0.01 ? shoulder : shoulder.add(toTip.scale(Math.min(0.72, length) / length));
+            Vec3 aimed = length < 0.01 ? shoulder : shoulder.add(toTip.scale(Math.min(0.72, length) / length));
+            if (living instanceof SpiderManEntity spidey) {
+                // Follow his animated arm: hanging at rest, pointed while shooting, overhead while zipping.
+                float aimW = SpiderManModel.ease(Mth.lerp(partialTick, spidey.webPoseO, spidey.webPose));
+                float zipW = SpiderManModel.ease(Mth.lerp(partialTick, spidey.zipPoseO, spidey.zipPose));
+                Vec3 forward = new Vec3(-Mth.sin(bodyYaw), 0, Mth.cos(bodyYaw));
+                Vec3 resting = shoulder.add(0, -0.62, 0).add(forward.scale(0.08));
+                Vec3 hand = resting.lerp(aimed, aimW);
+                return hand.lerp(shoulder.add(0, 0.7, 0), zipW);
+            }
+            return aimed;
         }
         return owner.getPosition(partialTick).add(0, owner.getBbHeight() * 0.5, 0);
     }
