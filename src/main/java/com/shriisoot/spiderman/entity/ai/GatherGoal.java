@@ -68,7 +68,7 @@ public class GatherGoal extends Goal {
     }
 
     @Override
-    public boolean canContinueUse() {
+    public boolean canContinueToUse() {
         return canUse();
     }
 

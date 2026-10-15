@@ -23,7 +23,7 @@ public class HoldPositionGoal extends Goal {
     }
 
     @Override
-    public boolean canContinueUse() {
+    public boolean canContinueToUse() {
         BlockPos post = spidey.getStayPos();
         return spidey.getMode() == SpiderManEntity.Mode.STAY && spidey.getTarget() == null
                 && post != null && spidey.blockPosition().distSqr(post) > 1 && !spidey.getNavigation().isDone();

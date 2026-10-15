@@ -31,7 +31,7 @@ public class FollowOwnerGoal extends Goal {
     }
 
     @Override
-    public boolean canContinueUse() {
+    public boolean canContinueToUse() {
         Player owner = validOwner();
         return spidey.getMode() == SpiderManEntity.Mode.FOLLOW && spidey.getTarget() == null
                 && owner != null && spidey.distanceToSqr(owner) > 2.5 * 2.5;

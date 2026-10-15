@@ -73,7 +73,7 @@ Requires JDK 21.
 ./gradlew runClient      # launches a dev client with the mod
 ```
 
-Versions are pinned in `gradle.properties` (Fabric Loader 0.16.14, Fabric API 0.116.6+1.21.1, Loom 1.10). The project uses Mojang's official mappings.
+Versions are pinned in `gradle.properties` (Fabric Loader 0.17.3, Fabric API 0.116.17+1.21.1, Loom 1.11.8). The project uses Mojang's official mappings.
 
 ## Regenerating assets
 
