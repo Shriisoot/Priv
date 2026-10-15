@@ -4,6 +4,8 @@ import com.shriisoot.spiderman.entity.SpiderManEntity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.target.TargetGoal;
 import net.minecraft.world.entity.ai.targeting.TargetingConditions;
+import net.minecraft.world.entity.decoration.ArmorStand;
+import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.player.Player;
 
 import java.util.EnumSet;
@@ -22,14 +24,14 @@ public class DefendOwnerGoal extends TargetGoal {
     }
 
     private boolean valid(LivingEntity e) {
-        return e != null && e != spidey && e.isAlive() && !(e instanceof Player) && !(e instanceof SpiderManEntity)
-                && canAttack(e, TargetingConditions.DEFAULT);
+        return e != null && e != spidey && e.isAlive() && !spidey.isFriendly(e) && !(e instanceof Creeper)
+                && !(e instanceof ArmorStand) && canAttack(e, TargetingConditions.DEFAULT);
     }
 
     @Override
     public boolean canUse() {
         Player owner = spidey.getOwner();
-        if (owner == null || owner.level() != spidey.level()) {
+        if (owner == null || !owner.isAlive() || owner.level() != spidey.level()) {
             return false;
         }
         LivingEntity attacker = owner.getLastHurtByMob();

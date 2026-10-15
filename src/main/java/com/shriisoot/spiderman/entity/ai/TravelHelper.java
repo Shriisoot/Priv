@@ -11,6 +11,9 @@ final class TravelHelper {
     }
 
     static void travelTo(SpiderManEntity spidey, Entity target, BooleanSupplier repath) {
+        if (spidey.isPassenger()) {
+            spidey.stopRiding();
+        }
         double dist = spidey.distanceTo(target);
         if (dist > 56) {
             spidey.teleportNear(target);
@@ -20,7 +23,8 @@ final class TravelHelper {
             spidey.webZipToward(target.position());
             return;
         }
-        if (repath.getAsBoolean() && spidey.onGround()) {
+        // Re-path while swimming or climbing too, or he bobs in place forever once his last path runs out mid-lake.
+        if (repath.getAsBoolean() && (spidey.onGround() || spidey.isInWater() || spidey.onClimbable())) {
             boolean moving = spidey.getNavigation().moveTo(target, dist > 9 ? 1.5 : 1.15);
             if (!moving && dist > 10 && spidey.canZip()) {
                 spidey.webZipToward(target.position());

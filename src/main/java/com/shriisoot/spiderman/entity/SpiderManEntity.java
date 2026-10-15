@@ -5,6 +5,7 @@ import com.shriisoot.spiderman.entity.ai.DeliverGoal;
 import com.shriisoot.spiderman.entity.ai.FollowOwnerGoal;
 import com.shriisoot.spiderman.entity.ai.GatherGoal;
 import com.shriisoot.spiderman.entity.ai.HoldPositionGoal;
+import com.shriisoot.spiderman.entity.ai.SpiderManNavigation;
 import com.shriisoot.spiderman.entity.work.Resource;
 import com.shriisoot.spiderman.registry.ModSounds;
 import net.minecraft.ChatFormatting;
@@ -34,6 +35,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.NeutralMob;
+import net.minecraft.world.entity.OwnableEntity;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.SpawnGroupData;
@@ -46,7 +48,6 @@ import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
-import net.minecraft.world.entity.ai.navigation.WallClimberNavigation;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.Monster;
@@ -97,7 +98,14 @@ public class SpiderManEntity extends PathfinderMob {
 
     private static final Pattern NUMBER = Pattern.compile("\\b(\\d{1,3})\\b");
 
-    private final SimpleContainer inventory = new SimpleContainer(27);
+    private final SimpleContainer inventory = new SimpleContainer(27) {
+        @Override
+        public boolean stillValid(Player player) {
+            // Close the menu if he dies, unloads or wanders off, or items could be duplicated or lost.
+            return SpiderManEntity.this.isAlive() && !SpiderManEntity.this.isRemoved()
+                    && player.canInteractWithEntity(SpiderManEntity.this, 4.0);
+        }
+    };
 
     @Nullable private Resource orderResource;
     private int orderTarget;
@@ -112,6 +120,7 @@ public class SpiderManEntity extends PathfinderMob {
     private int animTicks;
     private int webCooldown;
     private int zipCooldown;
+    private int teleportCooldown;
 
     // Client-side pose blending, eased in the model.
     public float webPose, webPoseO;
@@ -154,7 +163,7 @@ public class SpiderManEntity extends PathfinderMob {
         this.targetSelector.addGoal(2, new HurtByTargetGoal(this) {
             @Override
             public boolean canUse() {
-                return super.canUse() && !(SpiderManEntity.this.getLastHurtByMob() instanceof Player);
+                return super.canUse() && !isFriendly(SpiderManEntity.this.getLastHurtByMob());
             }
         });
         this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, Monster.class, 10, true, false,
@@ -164,7 +173,7 @@ public class SpiderManEntity extends PathfinderMob {
 
     @Override
     protected PathNavigation createNavigation(Level level) {
-        return new WallClimberNavigation(this, level);
+        return new SpiderManNavigation(this, level);
     }
 
     @Override
@@ -229,6 +238,15 @@ public class SpiderManEntity extends PathfinderMob {
     public Player getOwner() {
         UUID uuid = getOwnerUUID();
         return uuid == null ? null : level().getPlayerByUUID(uuid);
+    }
+
+    /** Players, the owner's pets and other Spider-Men are never fair game. */
+    public boolean isFriendly(@Nullable Entity entity) {
+        if (entity == null || entity instanceof Player || entity instanceof SpiderManEntity) {
+            return true;
+        }
+        UUID owner = getOwnerUUID();
+        return owner != null && entity instanceof OwnableEntity pet && owner.equals(pet.getOwnerUUID());
     }
 
     public boolean isOwnedBy(Player player) {
@@ -307,6 +325,7 @@ public class SpiderManEntity extends PathfinderMob {
         }
         if (webCooldown > 0) webCooldown--;
         if (zipCooldown > 0) zipCooldown--;
+        if (teleportCooldown > 0) teleportCooldown--;
         if (animTicks > 0 && --animTicks == 0) {
             this.entityData.set(DATA_ANIM, ANIM_NONE);
         }
@@ -455,6 +474,10 @@ public class SpiderManEntity extends PathfinderMob {
     }
 
     public void teleportNear(Entity target) {
+        if (teleportCooldown > 0) {
+            return;
+        }
+        teleportCooldown = 40;
         for (int i = 0; i < 12; i++) {
             double x = target.getX() + (random.nextDouble() - 0.5) * 5;
             double z = target.getZ() + (random.nextDouble() - 0.5) * 5;
@@ -496,7 +519,11 @@ public class SpiderManEntity extends PathfinderMob {
             reeling.put(item.getUUID(), 80);
             spawned.add(item);
         }
-        orderProgress++;
+        int gathered = 0;
+        for (ItemStack drop : drops) {
+            gathered += drop.getCount();
+        }
+        orderProgress += Math.max(1, gathered);
         return spawned;
     }
 
@@ -523,7 +550,8 @@ public class SpiderManEntity extends PathfinderMob {
         }
         String t = " " + text.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9 ]", " ").replaceAll("\\s+", " ").trim() + " ";
 
-        if (containsAny(t, " dismiss ", " go home ", " bye ", " goodbye ", " leave ")) {
+        // Dismissal deletes him, so only accept it as the entire order, never as a word inside a sentence.
+        if (t.matches(" (dismiss|dismissed|go home|bye|goodbye|bye bye|you can go|leave) ")) {
             dismiss();
             return;
         }
@@ -531,8 +559,16 @@ public class SpiderManEntity extends PathfinderMob {
             reportStatus();
             return;
         }
+        // Stop/stay and give are checked before resources so "stop mining stone" and "give me the wood" mean what they say.
+        if (containsAny(t, " stay ", " wait ", " stop ", " sit ", " guard ", " hold ", " chill ", " stand ")) {
+            setMode(Mode.STAY);
+            say(pick("Holding this spot. Spider-sense is on.", "I'll hang around right here.", "Guarding this spot!"));
+            return;
+        }
         Resource resource = Resource.fromText(t);
-        if (resource != null) {
+        boolean gatherVerb = containsAny(t, " get ", " gather ", " mine ", " chop ", " collect ", " fetch ", " find ", " bring ",
+                " grab ", " cut ", " dig ", " harvest ", " need ", " want ") || NUMBER.matcher(t).find();
+        if (resource != null && gatherVerb && !containsAny(t, " give ", " deliver ", " hand ")) {
             startOrder(resource, parseAmount(t));
             return;
         }
@@ -545,14 +581,13 @@ public class SpiderManEntity extends PathfinderMob {
             }
             return;
         }
-        if (containsAny(t, " stay ", " wait ", " stop ", " sit ", " guard ", " hold ", " chill ", " stand ")) {
-            setMode(Mode.STAY);
-            say(pick("Holding this spot. Spider-sense is on.", "I'll hang around right here.", "Guarding this spot!"));
-            return;
-        }
         if (containsAny(t, " follow ", " come ", " here ", " with me ", " lets go ", " let s go ")) {
             setMode(Mode.FOLLOW);
             say(pick("Right behind you!", "Swinging your way!", "Lead the way, I've got your back."));
+            return;
+        }
+        if (resource != null) {
+            say("Want me to fetch some " + resource.displayName() + "? Say \"spidey get 16 " + resource.displayName() + "\".");
             return;
         }
         say("Not sure what you mean. Try \"spidey get 16 wood\", \"spidey follow\", \"spidey stay\" or \"spidey give\".");

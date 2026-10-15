@@ -18,7 +18,7 @@ public class DeliverGoal extends Goal {
 
     private Player validOwner() {
         Player owner = spidey.getOwner();
-        if (owner == null || owner.isSpectator() || owner.level() != spidey.level()) {
+        if (owner == null || !owner.isAlive() || owner.isSpectator() || owner.level() != spidey.level()) {
             return null;
         }
         return owner;

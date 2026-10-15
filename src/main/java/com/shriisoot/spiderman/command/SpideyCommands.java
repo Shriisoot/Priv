@@ -7,6 +7,8 @@ import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.TickTask;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.List;
@@ -29,7 +31,10 @@ public final class SpideyCommands {
             Matcher matcher = CHAT_ORDER.matcher(message.signedContent());
             if (matcher.matches()) {
                 String order = matcher.group(1);
-                sender.getServer().execute(() -> dispatch(sender, order, false));
+                // execute() would run inline on the server thread, so the reply would arrive before the
+                // player's own line; queue it for after this tick instead.
+                MinecraftServer server = sender.getServer();
+                server.tell(new TickTask(server.getTickCount(), () -> dispatch(sender, order, false)));
             }
         });
 

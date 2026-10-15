@@ -624,7 +624,7 @@ public class AutoTestClient implements ClientModInitializer {
 
         // --- yank a mob with the web shooter
         command("tp @s 70 " + G + " 0 0 0");
-        command("summon minecraft:pig 70 " + G + " 14 {NoAI:1b}");
+        command("summon minecraft:pig 70 " + G + " 14");
         waitTicks(15);
         run(() -> {
             mc.player.setYRot(0F);

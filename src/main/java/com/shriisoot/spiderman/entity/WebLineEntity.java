@@ -227,7 +227,7 @@ public class WebLineEntity extends Projectile {
             return false;
         }
         if (owner instanceof SpiderManEntity spidey) {
-            return target != spidey.getOwner() && !(target instanceof SpiderManEntity);
+            return getMode() == MODE_STRIKE ? target == spidey.getTarget() : !spidey.isFriendly(target);
         }
         if (target instanceof SpiderManEntity spidey && owner instanceof Player player && spidey.isOwnedBy(player)) {
             return false;
