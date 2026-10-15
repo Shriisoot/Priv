@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "SES",
+    "RDB",
+    "SWS"
+  ],
+  "key": {
+    "S": { "item": "minecraft:string" },
+    "E": { "item": "minecraft:spider_eye" },
+    "R": { "item": "minecraft:red_dye" },
+    "D": { "item": "minecraft:diamond" },
+    "B": { "item": "minecraft:blue_dye" },
+    "W": { "item": "spiderman:web_shooter" }
+  },
+  "result": {
+    "id": "spiderman:spider_man_spawn_egg",
+    "count": 1
+  }
+}

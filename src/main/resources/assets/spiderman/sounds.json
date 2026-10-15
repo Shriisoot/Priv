@@ -1,0 +1,17 @@
+{
+  "thwip": {
+    "subtitle": "subtitles.spiderman.thwip",
+    "sounds": [
+      "spiderman:thwip1",
+      "spiderman:thwip2",
+      "spiderman:thwip3"
+    ]
+  },
+  "web_hit": {
+    "subtitle": "subtitles.spiderman.web_hit",
+    "sounds": [
+      "spiderman:web_hit1",
+      "spiderman:web_hit2"
+    ]
+  }
+}

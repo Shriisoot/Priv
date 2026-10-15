@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.shriisoot.spiderman.mixin.client",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "HumanoidModelMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

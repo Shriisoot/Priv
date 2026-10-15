@@ -1,0 +1,15 @@
+{
+  "entity.spiderman.spider_man": "Spider-Man",
+  "entity.spiderman.web_line": "Web Line",
+  "item.spiderman.web_shooter": "Web Shooter",
+  "item.spiderman.web_shooter.tip.shoot": "Right-click: shoot a web line / let go",
+  "item.spiderman.web_shooter.tip.zip": "Sneak + right-click: web-zip straight to the spot",
+  "item.spiderman.web_shooter.tip.swing": "While swinging: W pumps your swing, A/D steer",
+  "item.spiderman.web_shooter.tip.reel": "Hold sneak: reel yourself in",
+  "item.spiderman.web_shooter.tip.release": "Jump mid-air: let go with a boost",
+  "item.spiderman.web_shooter.tip.yank": "Hit a mob to yank it to you",
+  "item.spiderman.spider_man_spawn_egg": "Spider-Man Spawn Egg",
+  "itemGroup.spiderman": "Spider-Man",
+  "subtitles.spiderman.thwip": "Web shoots",
+  "subtitles.spiderman.web_hit": "Web sticks"
+}

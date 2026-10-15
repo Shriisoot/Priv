@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "spiderman",
+  "version": "${version}",
+  "name": "Spider-Man: Friendly Neighborhood Helper",
+  "description": "Summon a Spider-Man who gathers resources on command, fights for you, crawls walls and web-zips around. Comes with a Web Shooter for real rope-physics web-swinging.",
+  "authors": ["Shriisoot"],
+  "license": "All-Rights-Reserved",
+  "icon": "assets/spiderman/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["com.shriisoot.spiderman.SpiderManMod"],
+    "client": ["com.shriisoot.spiderman.client.SpiderManClient"]
+  },
+  "mixins": [
+    {
+      "config": "spiderman.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
